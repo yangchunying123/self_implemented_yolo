@@ -1,7 +1,6 @@
 import torch
 from torch.autograd import Variable
 from yolov1 import YOLOv1
-from selfloss import Loss
 import os
 import numpy as np
 import math
@@ -72,6 +71,7 @@ def test_forward_iteration():
 
 def train():
     from datetime import datetime
+    from selfloss import Loss
 
     dataloader_dict = get_data_loader()
     yolo = YOLOv1()
@@ -102,7 +102,7 @@ def train():
 
             # Forward to compute loss.
             preds = yolo(imgs)
-            loss = criterion(preds, targets)
+            loss, loss_dict = criterion(preds, targets)
             loss_this_iter = loss.item()
             total_loss += loss_this_iter * batch_size_this_iter
             total_batch += batch_size_this_iter
@@ -118,9 +118,10 @@ def train():
             if n_iter % tb_log_freq == 0:
                 writer.add_scalar('train/loss', loss_this_iter, n_iter)
                 writer.add_scalar('lr', lr, n_iter)
-        
-        
-        print('Val of epoch: {}, iter: {}'.format(epoch, i))
+                
+                for k, v in loss_dict.items():
+                    writer.add_scalar(k, v.item(), n_iter)
+
         yolo.eval()
         val_loss = 0.0
         total_batch = 0
@@ -132,7 +133,7 @@ def train():
             imgs, targets = imgs.cuda(), targets.cuda()
             with torch.no_grad():
                 preds = yolo(imgs)
-            loss = criterion(preds, targets)
+            loss, _ = criterion(preds, targets)
             loss_this_iter = loss.item()
             val_loss += loss_this_iter * batch_size_this_iter
             total_batch += batch_size_this_iter

@@ -13,8 +13,8 @@ init_lr = 1e-3
 base_lr = 0.01
 momentum = 0.9
 weight_decay = 5.0e-4
-num_epochs = 120
-batch_size = 128
+num_epochs = 1
+batch_size = 64
 image_size = 416
 
 def update_lr(optimizer, epoch, burnin_base, burnin_exp=4.0):
@@ -55,10 +55,10 @@ def get_data_loader():
 
 def train():
     from datetime import datetime
-    from models.yolo import YOLOV1, load
+    from models.yolo import YOLOV1
     from models.loss import Loss
     dataloader_dict = get_data_loader()
-    model, _, _ = load('/home/asher/Downloads/yolo_69.6.pth')
+    model = YOLOV1()
     yolo = model.cuda()
     criterion = Loss(20).cuda()
     optimizer = torch.optim.SGD(yolo.parameters(), lr=init_lr, momentum=momentum, weight_decay=weight_decay)
@@ -71,7 +71,6 @@ def train():
     best_val_loss = np.inf
 
     for epoch in range(num_epochs):
-        print('Starting epoch {} / {}'.format(epoch, num_epochs))
         yolo.train()
         total_loss = 0.0
         total_batch = 0

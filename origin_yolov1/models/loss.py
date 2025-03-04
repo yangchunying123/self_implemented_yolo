@@ -67,8 +67,7 @@ class Loss(nn.Module):
         my_gt = my_gt[obj_mask].view(-1, N)             #(obj_num, N)
         my_preds = my_preds[obj_mask].view(-1, N)       #(obj_num, N)
         obj_num = my_gt.size(0)  # num of objects contains in a image/batch
-        
-        gt_objs =  target_tensor[obj_mask].view(-1, N).contiguous()     #(obj_num, 5)
+        gt_objs =  target_tensor[obj_mask].view(-1, N).contiguous()     #(obj_num, N)
         pred_objs = pred_tensor[obj_mask].view(-1, N).contiguous()
         preds_posi = torch.zeros(obj_num, 5).cuda()    #(obj_num, 5)
 
@@ -85,6 +84,7 @@ class Loss(nn.Module):
             iou = self.compute_iou(gt_box, pred_box)
             iou_value, index = iou.max(1)    
             iou_value, index = iou_value.item(), index.item()  
+            print(' iou value is {}, index is {}'.format(iou_value, index))
             gt_objs[i, 4] = iou_value
             for b in range(B):
                 if b != index:
@@ -93,16 +93,15 @@ class Loss(nn.Module):
                     preds_posi[i] = pred_objs[i, 5 * b : 5 * b + 5]
         
         pre_nega_conf = pred_tensor[no_obj_mask].contiguous().view(-1, N)[ :, : 5 * B].contiguous().view(-1, 5)[..., 4] # single dimension tensor , shape should be ( S * S - obj_num) * B , curently
-        pre_nega_conf = torch.cat([pre_nega_conf, torch.tensor(extra_conf.cuda())], dim=0)
+        pre_nega_conf = torch.cat([pre_nega_conf, torch.tensor(extra_conf).cuda()], dim=0)
         
-        loss_xy = self.lambda_coord * F.mse_loss(preds_posi[..., : 2], gt_objs[..., : 2], reduction='sum')
-        loss_wh = self.lambda_coord * F.mse_loss(torch.sqrt(torch.clamp(preds_posi[..., 2: 4], 0, 1)), torch.sqrt(gt_objs[..., 2: 4]), reduction='sum')
+        loss_xy = self.lambda_coord * F.mse_loss(torch.clamp(preds_posi[..., : 2], 0, 1), gt_objs[..., : 2], reduction='sum')
+        loss_wh = self.lambda_coord * F.mse_loss(torch.sqrt(preds_posi[..., 2: 4]), torch.sqrt(gt_objs[..., 2: 4]), reduction='sum')
         loss_class = F.mse_loss(pred_objs[..., 5 * B :], gt_objs[..., 5 * B : ], reduction='sum')
         loss_conf_posi = F.mse_loss(preds_posi[..., 4], gt_objs[..., 4], reduction='sum')
-        loss_conf_nega = self.lambda_noobj * F.mse_loss(pre_nega_conf, torch.zeros_like(pre_nega_conf), reduction='sum')
+        loss_conf_nega = self.lambda_noobj * F.mse_loss(pre_nega_conf, torch.zeros_like(pre_nega_conf, dtype=torch.float32), reduction='sum')
         # # Total loss
         loss = loss_xy + loss_wh + loss_conf_posi +  loss_conf_nega + loss_class
-        loss = loss / float(batch_size)
         loss_dict = {
             'loss_xy': loss_xy, 
             'loss_wh' : loss_wh,
@@ -110,6 +109,7 @@ class Loss(nn.Module):
             'loss_conf_posi': loss_conf_posi,
             'loss_conf_nega': loss_conf_nega
         }
+        # print('gt tensor is {}, pre tensor is {}'.format(gt_objs[:, : 5], preds_posi))
         return loss/float(batch_size)
     
 
@@ -117,21 +117,22 @@ class Loss(nn.Module):
         my_gts, my_preds = gts.clone(), predictions.clone()
         batch_size, S, _, N = predictions.size(0), predictions.size(1), predictions.size(2), predictions.size(3) 
         B = (N - self.C) // 5 
-        from origin_yolov1.utils.tools import create_grid
-        grid = create_grid(S, batch=batch_size)
+        from utils.tools import create_grid
+        grid = create_grid(S, batch=batch_size).cuda()
         for b in range(B):
             my_gts[..., 5 *b : 5 * b + 2] = (my_gts[..., 5 *b : 5 * b + 2] + grid) / float(S)
             my_preds[..., 5 *b : 5 * b + 2] = (my_preds[..., 5 *b : 5 * b + 2] + grid)/float(S)
         return my_gts, my_preds
 
 if __name__ == '__main__':
-    t = torch.rand(1, 7, 7, 30)
-    t[..., 5: 10] = 0
+    t = torch.rand(4, 7, 7, 30).cuda()
+    t[..., 4] = 0
+    t[..., 9] = 0
     import random
     for _ in range(5):
         i = random.randint(0, 6)
         j = random.randint(0, 6)
         t[:, j, i, 4] = 1
-    pre = torch.rand(1, 7, 7, 30)
+    pre = torch.rand_like(t)
     myloss = Loss(20)
     myloss(pre, t)
