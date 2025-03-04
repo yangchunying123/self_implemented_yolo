@@ -28,6 +28,11 @@ class YOLOV1(nn.Module):
         feat = self.convsets(feat)
         pred = self.pred(feat)
         pred = pred.permute(0, 2, 3, 1).contiguous()
+        for b in range(self.B):
+            pred[..., 5 * b : 5 * b + 2] = torch.sigmoid(pred[..., 5 * b : 5 * b + 2])
+            pred[..., 5 * b + 2 : 5 * b + 4] = torch.exp(pred[..., 5 * b + 2 : 5 * b + 4])
+            pred[..., 5 * b + 4] = torch.sigmoid(pred[..., 5 * b + 4])
+        pred[..., 5 * self.B : ] = torch.sigmoid(pred[..., 5 * self.B: ])
         return pred
     
 def load(path):
