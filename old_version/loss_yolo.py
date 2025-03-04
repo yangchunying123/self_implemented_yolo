@@ -76,8 +76,8 @@ class Loss(nn.Module):
         N = 5 * B + C    # 5=len([x, y, w, h, conf]
 
         batch_size = pred_tensor.size(0)
-        coord_mask = target_tensor[:, :, :, 4] > 0  # mask for the cells which contain objects. [n_batch, S, S]
-        noobj_mask = target_tensor[:, :, :, 4] == 0 # mask for the cells which do not contain objects. [n_batch, S, S]
+        coord_mask = target_tensor[:, :, :, 4] == 1  # mask for the cells which contain objects. [n_batch, S, S]
+        noobj_mask = target_tensor[:, :, :, 4] < 1 # mask for the cells which do not contain objects. [n_batch, S, S]
         coord_mask = coord_mask.unsqueeze(-1).expand_as(target_tensor) # [n_batch, S, S] -> [n_batch, S, S, N]
         noobj_mask = noobj_mask.unsqueeze(-1).expand_as(target_tensor) # [n_batch, S, S] -> [n_batch, S, S, N]
 
@@ -157,7 +157,7 @@ class Loss(nn.Module):
             'loss_conf_posi': loss_obj,
             'loss_conf_nega': loss_noobj
         }
-        print(loss, '\n', loss_dict)
         loss = loss / float(batch_size)
 
-        return loss
+        return loss, loss_dict
+        # return loss

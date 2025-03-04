@@ -269,8 +269,8 @@ class YOLODetector:
 
 if __name__ == '__main__':
     image_path = 'zhupipi.jpg'
-    out_path = 'result.png'
-    model_path = 'results/Mar03_17-06-54/model_best.pth'
+    out_path = 'output.png'
+    model_path = 'results/Mar04_17-54-03/model_best.pth'
     gpu_id = 0
     yolo = YOLODetector(model_path, gpu_id=gpu_id, conf_thresh=0.25, prob_thresh=0.05, nms_thresh=0.1)
     image = cv2.imread(image_path)
