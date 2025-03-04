@@ -40,9 +40,9 @@ def get_lr(optimizer):
 def get_data_loader():
     from voc_yolo import VOCDataset
     from torch.utils.data import DataLoader
-    image_dir = '/home/asher/codes/python/self_yolo_imple_serires/DATASET/VOC/2007/JPEGImages'
-    train_label = '/home/asher/codes/python/self_yolo_imple_serires/DATASET/train.txt'
-    val_label = '/home/asher/codes/python/self_yolo_imple_serires/DATASET/val.txt'
+    image_dir = '/home/asher/codes/python/yolo_series/DATASET/VOC/2007/JPEGImages'
+    train_label = '/home/asher/codes/python/yolo_series/DATASET/train.txt'
+    val_label = '/home/asher/codes/python/yolo_series/DATASET/val.txt'
     train_dataset = VOCDataset(True, image_dir, train_label, image_size=224)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
 
