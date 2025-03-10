@@ -1,20 +1,17 @@
 import torch
-from torch.autograd import Variable
 import os
 import numpy as np
 import math
 from tensorboardX import SummaryWriter
 from rich import print
 
-print_freq = 5
 tb_log_freq = 5
-
 init_lr = 1e-3
 base_lr = 0.01
 momentum = 0.9
 weight_decay = 5.0e-4
-num_epochs = 1
-batch_size = 64
+num_epochs = 160
+batch_size = 192
 image_size = 416
 
 def update_lr(optimizer, epoch, burnin_base, burnin_exp=4.0):
@@ -58,79 +55,75 @@ def train():
     from models.yolo import YOLOV1
     from models.loss import Loss
     dataloader_dict = get_data_loader()
-    model = YOLOV1()
-    yolo = model.cuda()
+    yolo = YOLOV1().cuda()
     criterion = Loss(20).cuda()
-    optimizer = torch.optim.SGD(yolo.parameters(), lr=init_lr, momentum=momentum, weight_decay=weight_decay)
+    # optimizer = torch.optim.SGD(yolo.parameters(), lr=init_lr, momentum=momentum, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(yolo.parameters(), lr=1e-4)
+
 
     log_dir = datetime.now().strftime('%b%d_%H-%M-%S')
     log_dir = os.path.join('results', log_dir)
     writer = SummaryWriter(log_dir=log_dir)
-    logfile = open(os.path.join(log_dir, 'log.txt'), 'w')
 
     best_val_loss = np.inf
+    train_all_iters = len(dataloader_dict['train']) 
 
     for epoch in range(num_epochs):
-        yolo.train()
         total_loss = 0.0
+        total_batch_train = 0
+        val_loss = 0.0
         total_batch = 0
 
+        yolo.train()
         for i, (imgs, targets) in enumerate(dataloader_dict['train']):
-            update_lr(optimizer, epoch, float(i) / float(len(dataloader_dict['train']) - 1))
+            # update_lr(optimizer, epoch, float(i) / float(len(dataloader_dict['train']) - 1))
             lr = get_lr(optimizer)
             batch_size_this_iter = imgs.size(0)
-            imgs = Variable(imgs)
-            targets = Variable(targets)
             imgs, targets = imgs.cuda(), targets.cuda()
 
             # Forward to compute loss.
             preds = yolo(imgs)
-            loss = criterion(preds, targets)
+            loss, lossdict = criterion(preds, targets)
             loss_this_iter = loss.item()
             total_loss += loss_this_iter * batch_size_this_iter
-            total_batch += batch_size_this_iter
+            total_batch_train += batch_size_this_iter
 
             # Backward to update model weight.
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            if i % print_freq == 0:
-                print('Epoch [%d/%d], Iter [%d/%d], LR: %.6f, Loss: %.4f, Average Loss: %.4f' % (epoch, num_epochs, i, len(dataloader_dict['train']), lr, loss_this_iter, total_loss / float(total_batch)))
-            n_iter = epoch * len(dataloader_dict['train']) + i
+            n_iter = epoch * train_all_iters + i
             if n_iter % tb_log_freq == 0:
-                writer.add_scalar('train/loss', loss_this_iter, n_iter)
+                writer.add_scalar('train loss', loss_this_iter, n_iter)
                 writer.add_scalar('lr', lr, n_iter)
-        
-        yolo.eval()
-        val_loss = 0.0
-        total_batch = 0
+                for k, v in lossdict.items():
+                    writer.add_scalar(k, v.item(), n_iter)
 
+        # for name, param in yolo.named_parameters():
+        #     if param.grad is not None:
+        #         print(f"{name} 的梯度均值: {param.grad.abs().mean().item()}")
+
+
+        yolo.eval()
         for i, (imgs, targets) in enumerate(dataloader_dict['val']):
             batch_size_this_iter = imgs.size(0)
-            imgs = Variable(imgs)
-            targets = Variable(targets)
             imgs, targets = imgs.cuda(), targets.cuda()
             with torch.no_grad():
                 preds = yolo(imgs)
-            loss = criterion(preds, targets)
+            loss, _ = criterion(preds, targets)
             loss_this_iter = loss.item()
             val_loss += loss_this_iter * batch_size_this_iter
             total_batch += batch_size_this_iter
         val_loss /= float(total_batch)
 
-        logfile.writelines(str(epoch + 1) + '\t' + str(val_loss) + '\n')
-        logfile.flush()
         if best_val_loss > val_loss:
             best_val_loss = val_loss
             torch.save(yolo.state_dict(), os.path.join(log_dir, './model_best.pth'))
 
-        print('Epoch [%d/%d], Val Loss: %.4f, Best Val Loss: %.4f' % (epoch + 1, num_epochs, val_loss, best_val_loss))
-        writer.add_scalar('test/loss', val_loss, epoch + 1)
-
+        writer.add_scalar('val loss', val_loss, epoch + 1)
+        print('Epoch [%d/%d], Train Loss: %.4f, Val Loss: %.4f, Best Val Loss: %.4f' % (epoch + 1, num_epochs, total_loss/total_batch_train, val_loss, best_val_loss))
     writer.close()
-    logfile.close()
 
 if __name__ == '__main__':
     train()
-    # test_forward_iteration()
