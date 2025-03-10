@@ -178,8 +178,6 @@ class YOLODetector:
                 for b in range(B):
                     conf = pred_tensor[j, i, 5*b + 4]
                     prob = conf * class_score
-                    if conf > 0.1:
-                        print(j, i, conf, prob)
                     if float(prob) < self.prob_thresh:
                         continue
 
@@ -258,10 +256,10 @@ class YOLODetector:
 
 if __name__ == '__main__':
     image_path = 'zhupipi.jpg'
-    out_path = 'result.png'
-    model_path = 'results/Mar03_23-00-40/model_best.pth'
+    out_path = 'output.png'
+    model_path = 'results/Mar05_16-34-45/model_best.pth'
     gpu_id = 0
-    yolo = YOLODetector(model_path, gpu_id=gpu_id, conf_thresh=0.2, prob_thresh=0.05, nms_thresh=0.1)
+    yolo = YOLODetector(model_path, gpu_id=gpu_id, conf_thresh=0.2, prob_thresh=0.1, nms_thresh=0.1)
     
     boxes, class_names, probs = yolo.detect(image_path)
     print(boxes, class_names, probs)
