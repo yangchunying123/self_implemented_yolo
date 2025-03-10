@@ -14,5 +14,6 @@ yolov2_d19_cfg = {
     # train
     'lr_epoch': (150, 200),
     'max_epoch': 20,
-    'ignore_thresh': 0.5
+    'ignore_thresh': 0.5, 
+    'class_num': 20
 }
