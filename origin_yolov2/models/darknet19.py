@@ -108,7 +108,6 @@ def build_darknet19(pretrained=False):
                     checkpoint_state_dict.pop(k)
             else:
                 checkpoint_state_dict.pop(k)
-                print(k)
 
         model.load_state_dict(checkpoint_state_dict)
 
