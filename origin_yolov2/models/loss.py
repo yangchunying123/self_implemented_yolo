@@ -30,12 +30,14 @@ class Loss(nn.Module):
 
         xy_loss = self.lambda_coord * txty_loss_function(obj_pre[:, : 2], obj_gt[:, : 2])
         wh_loss = self.lambda_coord * twth_loss_function(obj_pre[:, 2:4], torch.log(obj_gt[:, 2:4] + 1e-9))
-        conf_loss = conf_loss_function(obj_pre[ : , 4], obj_gt[ : , 4]) + self.lambda_noobj * conf_loss_function(noobj_pre[ : , 4], torch.zeros(noobj_pre.size(0)).cuda())
+        conf_loss_pos = conf_loss_function(obj_pre[ : , 4], obj_gt[ : , 4])
+        conf_loss_neg = self.lambda_noobj * conf_loss_function(noobj_pre[ : , 4], torch.zeros(noobj_pre.size(0)).cuda())
         class_loss = cls_loss_function(obj_pre[ : , 5: ], obj_gt[ : , 5: ])
-        total_loss = (xy_loss + wh_loss + conf_loss + class_loss)/batch_size
+        total_loss = (xy_loss + wh_loss + conf_loss_neg + conf_loss_pos + class_loss)/batch_size
         return total_loss, {
             'xy_loss' : xy_loss,
             'wh_loss' : wh_loss,
-            'conf_loss': conf_loss,
+            'conf_posi_loss': conf_loss_pos,
+            'conf_neg_loss': conf_loss_neg,
             'class_loss' : class_loss
         }
