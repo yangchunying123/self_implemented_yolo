@@ -47,12 +47,12 @@ def train():
     model = net.to(device).train()
     # optimizer = torch.optim.Adam(model.parameters(), lr=yolov2_train_cfg['lr'])
     optimizer = torch.optim.SGD([
-    {'params': model.backbone.parameters(), 'lr': 3e-5},
-    {'params': model.convsets_1.parameters(), 'lr': 1e-3,
-     'params': model.route_layer.parameters(), 'lr': 1e-3,
-     'params': model.reorg.parameters(), 'lr': 1e-3,
-     'params': model.convsets_2.parameters(), 'lr': 1e-3,
-     'params': model.pred.parameters(), 'lr': 1e-3}
+     {'params': model.backbone.parameters(), 'lr': 3e-5},
+     {'params': model.convsets_1.parameters(), 'lr': 1e-3},
+     {'params': model.route_layer.parameters(), 'lr': 1e-3},
+     {'params': model.reorg.parameters(), 'lr': 1e-3},
+     {'params': model.convsets_2.parameters(), 'lr': 1e-3},
+     {'params': model.pred.parameters(), 'lr': 1e-3}
 ], momentum=0.9, weight_decay=5e-4)
 
     criterion = Loss().to(device)

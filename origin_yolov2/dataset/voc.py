@@ -60,23 +60,23 @@ if __name__ == '__main__':
 
     img_size = 416
     voc2007 = YOLOv2Dataset(image_root, label_txt, img_size)
-    # from utils.tools import visualize_gt_tensor, gt_creator
-    # for i in range(70, 100):
-    #     _, target, path = voc2007[i]
-    #     gt_tensor = gt_creator(int(img_size/ 32), target)
-    #     visualize_gt_tensor(path, gt_tensor)
+    from utils.tools import visualize_gt_tensor, gt_creator
+    for i in range(70, 100):
+        _, target, path = voc2007[i]
+        gt_tensor = gt_creator(int(img_size/ 32), target)
+        visualize_gt_tensor(path, gt_tensor)
 
-    from utils.tools import yolo_collefn_in, batch_gt_tensor_creator
-    dataloader = DataLoader(
-                    dataset=voc2007, 
-                    shuffle=False,
-                    batch_size=16, 
-                    num_workers=4,
-                    collate_fn=yolo_collefn_in,
-                    pin_memory=True,
-                    drop_last=False
-                    )
-    for i , (img, labels) in enumerate(dataloader):
-        gts = batch_gt_tensor_creator(int(img_size/32), labels)
-        print(img.shape, gts.shape)
+    # from utils.tools import yolo_collefn_in, batch_gt_tensor_creator
+    # dataloader = DataLoader(
+    #                 dataset=voc2007, 
+    #                 shuffle=False,
+    #                 batch_size=16, 
+    #                 num_workers=4,
+    #                 collate_fn=yolo_collefn_in,
+    #                 pin_memory=True,
+    #                 drop_last=False
+    #                 )
+    # for i , (img, labels) in enumerate(dataloader):
+    #     gts = batch_gt_tensor_creator(int(img_size/32), labels)
+    #     print(img.shape, gts.shape)
 
