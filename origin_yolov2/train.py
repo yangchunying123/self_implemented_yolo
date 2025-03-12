@@ -49,11 +49,11 @@ def train():
     optimizer = torch.optim.SGD([
      {'params': model.backbone.parameters(), 'lr': 3e-5},
      {'params': model.convsets_1.parameters(), 'lr': 1e-3},
-     {'params': model.route_layer.parameters(), 'lr': 1e-3},
-     {'params': model.reorg.parameters(), 'lr': 1e-3},
-     {'params': model.convsets_2.parameters(), 'lr': 1e-3},
+    #  {'params': model.route_layer.parameters(), 'lr': 1e-3},
+    #  {'params': model.reorg.parameters(), 'lr': 1e-3},
+    #  {'params': model.convsets_2.parameters(), 'lr': 1e-3},
      {'params': model.pred.parameters(), 'lr': 1e-3}
-], momentum=0.9, weight_decay=5e-4)
+], momentum=0.9, weight_decay=5e-3)
 
     criterion = Loss().to(device)
 

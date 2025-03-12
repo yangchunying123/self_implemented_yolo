@@ -23,9 +23,9 @@ class YOLOv2D19(nn.Module):
             Conv(1024, 1024, k=3, p=1),
             Conv(1024, 1024, k=3, p=1)
         ).cuda()
-        self.route_layer = Conv(512, 64, k=1).cuda()
-        self.reorg = reorg_layer(stride=2).cuda()
-        self.convsets_2 = Conv(1280, 1024, k=3, p=1).cuda()
+        # self.route_layer = Conv(512, 64, k=1).cuda()
+        # self.reorg = reorg_layer(stride=2).cuda()
+        # self.convsets_2 = Conv(1280, 1024, k=3, p=1).cuda()
         self.pred = nn.Conv2d(1024, self.num_anchors*(1 + 4 + self.num_classes), kernel_size=1).cuda()
 
 
@@ -35,9 +35,9 @@ class YOLOv2D19(nn.Module):
 
         # reorg layer
         p5 = self.convsets_1(feats['layer3'])
-        p4 = self.reorg(self.route_layer(feats['layer2']))
-        p5 = torch.cat([p4, p5], dim=1)
-        p5 = self.convsets_2(p5)
+        # p4 = self.reorg(self.route_layer(feats['layer2']))
+        # p5 = torch.cat([p4, p5], dim=1)
+        # p5 = self.convsets_2(p5)
         pred = self.pred(p5)
         B, abC, H, W = pred.size()
         pred = pred.permute(0, 2, 3, 1).contiguous() # B, H, W, anchor_num * (5 + class)
