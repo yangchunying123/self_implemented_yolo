@@ -72,7 +72,7 @@ def batch_image_tensor_creator(grid_num, batch_img_tensors):
 
 def gt_creator(grid_num, single_image_label_lists):
     anchors = yolov2_d19_cfg['anchor_size_voc']
-    gt_tensor = torch.zeros([grid_num, grid_num, len(anchors), 5 + yolov2_d19_cfg['class_num']])
+    gt_tensor = torch.zeros([grid_num, grid_num, len(anchors), 6])
 
     for box_class in single_image_label_lists:
         x, y, w, h, classid = box_class
@@ -89,7 +89,7 @@ def gt_creator(grid_num, single_image_label_lists):
         targetiou, index = torch.max(iou, dim=1)
         best_anchor = anchors[index.item()]
         gt_tensor[j, i, index.item(), : 5] = torch.tensor([cx, cy, w/best_anchor[0], h/best_anchor[1], targetiou.item()], dtype=torch.float32)
-        gt_tensor[j, i, index.item(), 5 + classid] = 1.0
+        gt_tensor[j, i, index.item(), 5] = classid
     return gt_tensor
 
 def visualize_gt_tensor(image_path, gt_tensor:torch.Tensor):
@@ -103,12 +103,11 @@ def visualize_gt_tensor(image_path, gt_tensor:torch.Tensor):
         for i in range(W):
             for anch in range(anchor):
                 if gt_tensor[j, i, anch, 4] > 0:
-                    xoff, yoff, widthoff, heightoff, conf = gt_tensor[j, i , anch, : 5]
-                    classid = torch.argmax(gt_tensor[j, i, anch, 5: ])   
+                    xoff, yoff, widthoff, heightoff, conf, classid = gt_tensor[j, i , anch, : ]  
                     x, y, w, h, = xoff + i, yoff + j , widthoff * anchors[anch][0], heightoff * anchors[anch][1] 
                     x1, x2, y1, y2 = x - 0.5 * w, x + 0.5 * w, y - 0.5 * h, y + 0.5 * h
                     x1, x2, y1, y2 = int(x1 * orig_w / W), int(x2 * orig_w / W), int(y1 * orig_h / H), int(y2 * orig_h / H)
-                    classstr, color  = list(VOC_CLASS_BGR.items())[classid]
+                    classstr, color  = list(VOC_CLASS_BGR.items())[int(classid.item())]
                     cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(image, classstr, (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(255, 255, 255), thickness=1, lineType=8)
     cv2.imshow('Image', image)
