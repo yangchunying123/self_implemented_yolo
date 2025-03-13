@@ -26,19 +26,20 @@ class Loss(nn.Module):
         cls_loss_function = nn.CrossEntropyLoss(reduction='sum')
         bce_loss_function = nn.BCEWithLogitsLoss(reduction='sum')
         sl1_loss_function = nn.SmoothL1Loss(reduction='sum')
+        mse_loss_function = nn.MSELoss(reduction='sum')
 
         wh_loss = self.lambda_coord * sl1_loss_function(obj_pre[:, 2:4], torch.log(obj_gt[:, 2:4] + 1e-9))
-        xy_loss = self.lambda_coord * bce_loss_function(obj_pre[:, : 2], obj_gt[:, : 2])
+        xy_loss = self.lambda_coord * mse_loss_function(torch.sigmoid(obj_pre[:, : 2]), obj_gt[:, : 2])
         conf_loss_pos = bce_loss_function(obj_pre[ : , 4], obj_gt[ : , 4])
         conf_loss_neg = self.lambda_noobj * bce_loss_function(noobj_pre[ : , 4], torch.zeros(noobj_pre.size(0)).cuda())
         class_loss = cls_loss_function(obj_pre[ : , 5: ], obj_gt[ : , 5].long())
         total_loss = (xy_loss + wh_loss + conf_loss_neg + conf_loss_pos + class_loss)/batch_size
         return total_loss, {
-            'xy_loss' : xy_loss,
-            'wh_loss' : wh_loss,
-            'conf_posi_loss': conf_loss_pos,
-            'conf_neg_loss': conf_loss_neg,
-            'class_loss' : class_loss
+            'xy_loss' : xy_loss / batch_size,
+            'wh_loss' : wh_loss / batch_size,
+            'conf_posi_loss': conf_loss_pos / batch_size,
+            'conf_neg_loss': conf_loss_neg / batch_size,
+            'class_loss' : class_loss / batch_size
         }
     
 if __name__ == '__main__':

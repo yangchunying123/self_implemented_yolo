@@ -157,7 +157,7 @@ class YOLODetector:
                     boxes.append([x/grid_size, y/ grid_size, w/ grid_size, h/ grid_size])
                     labels.append(index)
                     confidences.append(conf)
-                    class_scores.append(score)
+                    class_scores.append(v)
         if len(boxes) == 0:
             return False, ()
     
@@ -207,11 +207,11 @@ class YOLODetector:
 
 
 if __name__ == '__main__':
-    image_path = 'zhupipi.jpg'
+    image_path = '/home/asher/codes/python/yolo_series/self_implemented_yolo/test_image.jpg'
     out_path = 'output.png'
     model_path = 'results/2025-03-12_22:05:42/model_best.pth'
     gpu_id = 0
-    yolo = YOLODetector(model_path, gpu_id=gpu_id, conf_thresh=0.2, prob_thresh=0.1, nms_thresh=0.1)
+    yolo = YOLODetector(model_path, gpu_id=gpu_id, conf_thresh=0.2, prob_thresh=0.08, nms_thresh=0.1)
     
     boxes, class_names, probs = yolo.detect(image_path)
     print(boxes, class_names, probs)
