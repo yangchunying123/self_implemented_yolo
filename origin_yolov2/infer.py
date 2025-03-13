@@ -3,6 +3,7 @@ import os
 import cv2
 from rich import print
 from models.yolov2_d19 import YOLOv2D19
+from dataset.config import yolov2_d19_cfg as cfg
 
 # VOC class names and BGR color.
 VOC_CLASS_BGR = {
@@ -90,11 +91,11 @@ class YOLODetector:
         pred_tensor = pred_tensor.squeeze(0) # squeeze batch dimension.
 
         # Get detected boxes_detected, labels, confidences, class-scores.
-        boxes_normalized_all, class_labels_all, confidences_all, class_scores_all = self.decode(pred_tensor)
-        if boxes_normalized_all.size(0) == 0:
-            return [], [], [] # if no box found, return empty lists.
-
-        # Apply non maximum supression for boxes of each class.
+        contains, v = self.decode(pred_tensor, grid_size=int(image_size/32)) 
+        if not contains:
+            return [], [], [] 
+        
+        boxes_normalized_all, class_labels_all, confidences_all, class_scores_all = v
         boxes_normalized, class_labels, probs = [], [], []
 
         for class_label in range(len(self.class_name_list)):
@@ -137,18 +138,30 @@ class YOLODetector:
 
         return boxes_detected, class_names_detected, probs_detected
 
-    def decode(self, pred_tensor):
+    def decode(self, pred_tensor, grid_size = 13):
         H, W, anchor_num, N = pred_tensor.size(0), pred_tensor.size(1), pred_tensor.size(2), pred_tensor.size(-1)
         boxes, labels, confidences, class_scores = [], [], [], []
-        for j in range(H): 
-            for i in range(W): 
+        all_anchors = cfg['anchor_size_voc']
+        for i in range(H): 
+            for j in range(W): 
                 for anch in  range(anchor_num):
-                    conf = pred_tensor[j, i, anch, 4]
-                    targetiou, index = torch.max(pred_tensor[j, i, anch, 5: ], dim=1)
-
-          
-
-                    
+                    conf = torch.sigmoid(pred_tensor[j, i, anch, 4])
+                    if conf < self.conf_thresh:
+                        continue
+                    v, index = torch.max(pred_tensor[i, j, anch, 5: ], dim=0)
+                    score = v * conf
+                    if score < self.prob_thresh:
+                        continue
+                    tx, ty, tw, th = pred_tensor[i, j, anch, : 4]
+                    x, y, w, h = torch.sigmoid(tx) + j, torch.sigmoid(ty) + i, all_anchors[anch][0] * torch.exp(tw), all_anchors[anch][1] * torch.exp(th) 
+                    boxes.append([x/grid_size, y/ grid_size, w/ grid_size, h/ grid_size])
+                    labels.append(index)
+                    confidences.append(conf)
+                    class_scores.append(score)
+        if len(boxes) == 0:
+            return False, ()
+    
+        return True, (torch.tensor(boxes, dtype=torch.float32), torch.tensor(labels, dtype=torch.long), torch.tensor(confidences, dtype=torch.float32), torch.tensor(class_scores, dtype=torch.float32))
 
     def nms(self, boxes, scores):
         """ Apply non maximum supression.
@@ -197,7 +210,7 @@ class YOLODetector:
 if __name__ == '__main__':
     image_path = 'zhupipi.jpg'
     out_path = 'output.png'
-    model_path = 'results/Mar05_16-34-45/model_best.pth'
+    model_path = 'results/2025-03-12_22:05:42/model_best.pth'
     gpu_id = 0
     yolo = YOLODetector(model_path, gpu_id=gpu_id, conf_thresh=0.2, prob_thresh=0.1, nms_thresh=0.1)
     

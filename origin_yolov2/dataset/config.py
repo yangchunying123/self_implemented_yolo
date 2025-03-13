@@ -18,8 +18,8 @@ yolov2_d19_cfg = {
 }
 
 yolov2_train_cfg = {
-    'batch_size' : 16,
+    'batch_size' : 22,
     'lr': 1e-4,
-    'max_epoch': 120,
+    'max_epoch': 80,
     'loss_save_iter' : 5
 }

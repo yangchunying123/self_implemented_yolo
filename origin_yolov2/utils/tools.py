@@ -57,8 +57,8 @@ def compute_iou_centerxywh_format(bbox1, bbox2, max):
     b1[b1 > max] = max
     b2[:, 0 : 2] = bbox2[:, 0 : 2] - 0.5 * bbox2[:, 2 : 4]
     b2[:, 2 : 4] = bbox2[:, 0 : 2] + 0.5 * bbox2[:, 2 : 4]
-    b1[b1 < 0] = 0
-    b1[b1 > max] = max
+    b2[b2 < 0] = 0
+    b2[b2 > max] = max
     return compute_iou(b1, b2)
 
 def batch_gt_tensor_creator(grid_num, batch_labels):
