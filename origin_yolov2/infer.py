@@ -90,7 +90,6 @@ class YOLODetector:
         pred_tensor = pred_tensor.cpu().data
         pred_tensor = pred_tensor.squeeze(0) # squeeze batch dimension.
 
-        # Get detected boxes_detected, labels, confidences, class-scores.
         contains, v = self.decode(pred_tensor, grid_size=int(image_size/32)) 
         if not contains:
             return [], [], [] 
@@ -125,8 +124,9 @@ class YOLODetector:
             class_label = class_labels[b]
             prob = probs[b]
 
-            x1, x2 = w * box_normalized[0], w * box_normalized[2] # unnormalize x with image width.
-            y1, y2 = h * box_normalized[1], h * box_normalized[3] # unnormalize y with image height.
+            x, y, wgrid, hgrid = box_normalized[0], box_normalized[1], box_normalized[2], box_normalized[3]
+            x1, x2 = w * (x - 0.5 * wgrid), w * (x + 0.5 * wgrid) # unnormalize x with image width.
+            y1, y2 = h * (y - 0.5 * hgrid), h * (y + 0.5 * hgrid) # unnormalize y with image height.
             boxes_detected.append(((x1, y1), (x2, y2)))
 
             class_label = int(class_label) # convert from LongTensor to int.boxes_detected
@@ -138,7 +138,7 @@ class YOLODetector:
 
         return boxes_detected, class_names_detected, probs_detected
 
-    def decode(self, pred_tensor, grid_size = 13):
+    def decode(self, pred_tensor, grid_size):
         H, W, anchor_num, N = pred_tensor.size(0), pred_tensor.size(1), pred_tensor.size(2), pred_tensor.size(-1)
         boxes, labels, confidences, class_scores = [], [], [], []
         all_anchors = cfg['anchor_size_voc']
@@ -148,7 +148,7 @@ class YOLODetector:
                     conf = torch.sigmoid(pred_tensor[j, i, anch, 4])
                     if conf < self.conf_thresh:
                         continue
-                    v, index = torch.max(pred_tensor[i, j, anch, 5: ], dim=0)
+                    v, index = torch.max(torch.softmax(pred_tensor[i, j, anch, 5: ], dim=0), dim=0)
                     score = v * conf
                     if score < self.prob_thresh:
                         continue
@@ -183,7 +183,6 @@ class YOLODetector:
 
             i = ids_sorted.item() if (ids_sorted.numel() == 1) else ids_sorted[0]
             ids.append(i)
-
             if ids_sorted.numel() == 1:
                 break # If only one box is left (i.e., no box to supress), break.
 
