@@ -13,14 +13,14 @@ def get_lr(optimizer):
         return param_group['lr']
 
 def get_data_loader(batch_size, image_size):
-    from dataset.voc import YOLOv2Dataset
+    from dataset.voc import YOLOv2Dataset, DataAugment
     from torch.utils.data import DataLoader
     from utils.tools import yolo_collefn_in
     image_dir = '/home/asher/codes/python/yolo_series/DATASET/VOC/2007/JPEGImages'
     train_label = '/home/asher/codes/python/yolo_series/DATASET/train.txt'
     val_label = '/home/asher/codes/python/yolo_series/DATASET/val.txt'
 
-    train_dataset = YOLOv2Dataset(image_dir, train_label, image_size)
+    train_dataset = YOLOv2Dataset(image_dir, train_label, image_size, dataaugment=DataAugment(image_size))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8,  collate_fn=yolo_collefn_in)
     val_dataset = YOLOv2Dataset(image_dir, val_label, image_size)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8,  collate_fn=yolo_collefn_in)
@@ -46,14 +46,16 @@ def train():
     model = net.to(device).train()
     criterion = Loss().to(device)
     # optimizer = torch.optim.Adam(model.parameters(), lr=yolov2_train_cfg['lr'])
-    optimizer = torch.optim.SGD([
-     {'params': model.backbone.parameters(), 'lr': 1e-5},
-     {'params': model.convsets_1.parameters(), 'lr': 1e-4},
-    #  {'params': model.route_layer.parameters(), 'lr': 1e-3},
-    #  {'params': model.reorg.parameters(), 'lr': 1e-3},
-    #  {'params': model.convsets_2.parameters(), 'lr': 1e-3},
-     {'params': model.pred.parameters(), 'lr': 1e-4}
-], momentum=0.9, weight_decay=5e-3)
+#     optimizer = torch.optim.SGD([
+#      {'params': model.backbone.parameters(), 'lr': 6e-5},
+#      {'params': model.convsets_1.parameters(), 'lr': 1e-3},
+#     #  {'params': model.route_layer.parameters(), 'lr': 1e-3},
+#     #  {'params': model.reorg.parameters(), 'lr': 1e-3},
+#     #  {'params': model.convsets_2.parameters(), 'lr': 1e-3},
+#      {'params': model.pred.parameters(), 'lr': 1e-3}
+# ], momentum=0.9, weight_decay=5e-3)
+    optimizer = torch.optim.SGD(model.parameters(), lr=yolov2_train_cfg['lr'], momentum=0.9, weight_decay=5e-3)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90], gamma=0.1)
 
     
     c_time = time.strftime('%Y_%m_%d_%H:%M:%S',time.localtime(time.time()))
@@ -94,6 +96,7 @@ def train():
             optimizer.zero_grad()
             loss.backward()        
             optimizer.step()
+            scheduler.step()
                     
         
         grid_num = int(cfg['train_size']/ cfg['stride'])
