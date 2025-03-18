@@ -1,6 +1,6 @@
 import torch
 from dataset.config import yolov2_d19_cfg
-from math import ceil
+from math import floor
 import cv2
 
 VOC_CLASS_BGR = {
@@ -77,8 +77,8 @@ def gt_creator(grid_num, single_image_label_lists):
     for box_class in single_image_label_lists:
         x, y, w, h, classid = box_class
         x, y, w, h = grid_num * x, grid_num * y, grid_num * w, grid_num * h
-        i = ceil(x) - 1
-        j = ceil(y) - 1
+        i = floor(x)
+        j = floor(y)
         cx = x - i
         cy = y - j
         box_tensor = torch.tensor([x, y, w, h], dtype=torch.float32).unsqueeze(0)
@@ -88,7 +88,7 @@ def gt_creator(grid_num, single_image_label_lists):
         iou = compute_iou_centerxywh_format(box_tensor, anchor_tensor, grid_num)
         targetiou, index = torch.max(iou, dim=1)
         best_anchor = anchors[index.item()]
-        gt_tensor[j, i, index.item(), : 5] = torch.tensor([cx, cy, w/best_anchor[0], h/best_anchor[1], targetiou.item()], dtype=torch.float32)
+        gt_tensor[j, i, index.item(), : 5] = torch.tensor([cx, cy, w, h, targetiou.item()], dtype=torch.float32)
         gt_tensor[j, i, index.item(), 5] = classid
     return gt_tensor
 
@@ -104,7 +104,7 @@ def visualize_gt_tensor(image_path, gt_tensor:torch.Tensor):
             for anch in range(anchor):
                 if gt_tensor[j, i, anch, 4] > 0:
                     xoff, yoff, widthoff, heightoff, conf, classid = gt_tensor[j, i , anch, : ]  
-                    x, y, w, h, = xoff + i, yoff + j , widthoff * anchors[anch][0], heightoff * anchors[anch][1] 
+                    x, y, w, h, = xoff + i, yoff + j , widthoff, heightoff 
                     x1, x2, y1, y2 = x - 0.5 * w, x + 0.5 * w, y - 0.5 * h, y + 0.5 * h
                     x1, x2, y1, y2 = int(x1 * orig_w / W), int(x2 * orig_w / W), int(y1 * orig_h / H), int(y2 * orig_h / H)
                     classstr, color  = list(VOC_CLASS_BGR.items())[int(classid.item())]
