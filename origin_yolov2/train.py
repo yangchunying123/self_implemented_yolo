@@ -45,6 +45,7 @@ def train():
     net = yolo_net(device=device)
     model = net.to(device).train()
     criterion = Loss().to(device)
+    
     # optimizer = torch.optim.Adam(model.parameters(), lr=yolov2_train_cfg['lr'])
 #     optimizer = torch.optim.SGD([
 #      {'params': model.backbone.parameters(), 'lr': 6e-5},
@@ -55,15 +56,13 @@ def train():
 #      {'params': model.pred.parameters(), 'lr': 1e-3}
 # ], momentum=0.9, weight_decay=5e-3)
     optimizer = torch.optim.SGD(model.parameters(), lr=yolov2_train_cfg['lr'], momentum=0.9, weight_decay=5e-3)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 50], gamma=0.15)
 
     
     c_time = time.strftime('%Y_%m_%d_%H:%M:%S',time.localtime(time.time()))
     log_path = os.path.join('results', str(c_time))
     os.makedirs(log_path, exist_ok=True)
     writer = SummaryWriter(log_path)
-    with open(os.path.join(log_path, 'record.txt'), "w") as f:
-        pass  
     
     iters_per_epoch_train = len(loader_dict['train'])
     iters_per_epoch_val = len(loader_dict['val'])
